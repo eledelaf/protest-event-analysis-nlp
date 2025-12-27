@@ -6,7 +6,7 @@ MediaCloud to URLS_clean where I have the urls that I am going to use for the sc
 """
 
 # ---------------------------------------------------------------------
-# 0. URL prefixes we want to exclude (non-news or irrelevant sections)
+# 0. URL prefixes I want to exclude, non-news or irrelevant sections
 # ---------------------------------------------------------------------
 EXCLUDED_URL_PREFIXES = [
     # Daily Mail
@@ -58,7 +58,11 @@ EXCLUDED_URL_PREFIXES = [
 
 ]
 
-def is_excluded_title(title: str) -> bool:
+def is_excluded_title(title):
+    """
+    This function determines if a title should be excluded.
+    Excludes titles like "News Headlines", "Morning Headlines", "Evening Headlines", and "briefing:" patterns.
+    """
     if not isinstance(title, str):
         return False
     t = title.strip().lower()
@@ -72,7 +76,6 @@ def is_excluded_title(title: str) -> bool:
         return True
 
     # 2) "<weekday> briefing: ..." or any "briefing:" pattern
-    # E.g. "Tuesday briefing: ...", "Monday briefing: ..."
     if " briefing:" in t:
         return True
     
@@ -89,10 +92,7 @@ file_path = "/Users/elenadelafuente/Desktop/MASTER/TFM/Project/Project-Master/2.
 df = pd.read_csv(file_path, sep=';', skiprows=1, header=None)
 df = df.iloc[1:].reset_index(drop=True)
 
-header = [
-    "id", "indexed_date", "language", "media_name", "media_url", 
-    "publish_date", "title", "url"
-]
+header = ["id", "indexed_date", "language", "media_name", "media_url", "publish_date", "title", "url"]
 df.columns = header
 print(df)
 
@@ -106,17 +106,17 @@ df_clean = df[
     (df["media_url"] == "dailymail.co.uk") 
 ]
 
-# Keep only the columns we care about
+# Keep only the columns I care about
 df_clean = df_clean[["id", "media_url", "publish_date", "title", "url"]]
 
 # ---------------------------------------------------------------------
 # 3. Exclude URLs based on unwanted section prefixes
 # ---------------------------------------------------------------------
-# We drop any row where 'url' starts with one of the EXCLUDED_URL_PREFIXES
+# I drop any row where 'url' starts with one of the EXCLUDED_URL_PREFIXES
 mask_keep = ~df_clean["url"].astype(str).str.startswith(tuple(EXCLUDED_URL_PREFIXES))
 df_clean = df_clean[mask_keep]
 
-# Optional: reset index after filtering
+# Reset index after filtering
 df_clean = df_clean.reset_index(drop=True)
 
 print(df_clean)

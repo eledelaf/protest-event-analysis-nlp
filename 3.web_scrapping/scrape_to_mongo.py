@@ -1,12 +1,13 @@
 from urllib.parse import urlparse
 import pandas as pd
-import concurrent.futures # Esta integrado en Python ahora así q no hace falta importar
+import concurrent.futures 
 import time
 import random
 
 from datetime import datetime, timezone
 from fun_scrap3 import scrape_and_text # Scrapping function
-from tqdm import tqdm  # For a nice progress bar
+from tqdm import tqdm  # Progress bar
+
 from pymongo.mongo_client import MongoClient # To connect to mongo
 from pymongo.errors import PyMongoError
 from pymongo import UpdateOne
@@ -20,10 +21,12 @@ DOMAIN_TO_PAPER = {
     "dailymail.co.uk": "Daily Mail",
     "theguardian.com": "The Guardian",
     "standard.co.uk": "Evening Standard",
-}
+    }
 
 def _host(u: str) -> str:
-    """Return normalised hostname from a URL (no www)."""
+    """
+    Return normalised hostname from a URL (no www).
+    """
     if not u or not isinstance(u, str):
         return ""
     try:
@@ -33,13 +36,13 @@ def _host(u: str) -> str:
         return h
     except Exception:
         return ""
+    
 def infer_paper(url: str, media_url: str = "") -> str:
     """
     Decide the newspaper name from the domain of url (fallback to media_url).
     """
     h = _host(url) or _host(media_url)
 
-    # Match by suffix so it works with subdomains
     if h.endswith("dailymail.co.uk") or h.endswith("mailonline.co.uk"):
         return "Daily Mail"
     if h.endswith("theguardian.com"):
@@ -47,15 +50,17 @@ def infer_paper(url: str, media_url: str = "") -> str:
     if h.endswith("standard.co.uk"):
         return "Evening Standard"
 
-
-    # Fallback: keep hostname if unknown (or return "Unknown")
     return h or "Unknown"
 
-# --- 0.1 Configuration ---
-MAX_WORKERS = 1  # Number of threads. Adjust based on your network/CPU.
+# ---------------------------------------------------------------------
+# 0.1 Configuration
+# ---------------------------------------------------------------------
+MAX_WORKERS = 1  # Number of threads.
 INPUT_FILE = "3.web_scrapping/URLS_clean.csv"
 
-# --- 0.2 Connection to Mongo ---
+# ---------------------------------------------------------------------
+# 0.2 Connection to Mongo
+# ---------------------------------------------------------------------
 Mongo_uri = "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB"
 client = MongoClient(Mongo_uri)
 try:
@@ -65,10 +70,11 @@ except Exception as e:
         print(e)    
 
 db = client["ProjectMaster"] # Data base
-coll_texts = db["Texts"] # Here is where I am going to upload the Texts after the scrapping
+coll_texts = db["Texts"] # Collection where I am going to upload the Texts after the scrapping
 
-
-# --- 1. Worker Function ---
+# ---------------------------------------------------------------------
+# 1. Worker Function
+# ---------------------------------------------------------------------
 def process_url(index, url, title):
     """
     Worker function for each thread.
@@ -76,24 +82,23 @@ def process_url(index, url, title):
     """
 
     try:
-        # This makes requests look less robotic and avoids 429 errors
-        time.sleep(random.uniform(0.5, 2.5))
+        time.sleep(random.uniform(0.5, 2.5))# Avoids 429 errors
 
-        # We pass (url, title) 
         text = scrape_and_text(url, title)
         timestamp = datetime.now()
         
-        if text is None:  # Handle case where scrape_and_text fails 
+        if text is None:  # Handle case if scrape_and_text fails 
             return index, "SCRAPE_FAILED", timestamp
             
         return index, text, timestamp
     except Exception as e:
-        # Catch any other unexpected errors
+        # Unexpected errors
         print(f"\nUnexpected error in worker for index {index} ({url}): {e}")
         return index, f"WORKER_ERROR: {e}", datetime.now()
 
-
-# --- 2. Load and Prepare Data ---
+# ---------------------------------------------------------------------
+# 2. Load and Prepare Data
+# ---------------------------------------------------------------------
 print(f"Loading data from {INPUT_FILE}...")
 try:
     df = pd.read_csv(INPUT_FILE, sep=";")
@@ -110,15 +115,18 @@ df_1 = df_1[df_1['url'].str.startswith('http')]
 df_1 = df_1.drop_duplicates(subset=['url'])
 df_1["paper"] = df_1.apply(lambda r: infer_paper(r["url"], r["media_url"]), axis=1)
 
-
-# --- 3. Check in MONGO if that URL is been used already ---
+# ---------------------------------------------------------------------
+# 3. Check in MONGO if that URL is been used already 
+# ---------------------------------------------------------------------
 def ensure_indexes():
     coll_texts.create_index("status")
     coll_texts.create_index("publish_date")
 ensure_indexes()
 
-# --- 3.1 Build a set of known URLs from Mongo in order to skip them ---
-# Simplified this check. Since the URL is the _id, we only need to query the _id field.
+# ---------------------------------------------------------------------
+# 3.1 Build a set of known URLs from Mongo in order to skip them
+# ---------------------------------------------------------------------
+# Simplified this check. Since the URL is the _id, I only need to query the _id field.
 # This is more efficient than checking _id and url fields separately.
 already_done = {
     d["_id"]
@@ -138,12 +146,9 @@ print(f"Mongo counts -> done={n_done}, pending={n_pending}, failed={n_failed}, e
 
 
 # Get a list of rows that still need to be scraped
-# We use .iterrows() which gives (index, Series)
-# We need the *dataframe index* (like 0, 1, 5, 10) to use .loc later
-
 rows_to_scrape = [
     (idx, row["url"], row["title"], row["paper"])
-    for idx, row in df_1.iterrows()
+    for idx, row in df_1.iterrows() 
     if row["url"] not in already_done
 ]
 print(f"To scrape now: {len(rows_to_scrape)} (out of {len(df_1)})")
@@ -152,8 +157,9 @@ if not rows_to_scrape:
     print("Nothing to scrape. Exiting.")
     exit(0)
 
-
-# --- 4. Scrapping with ThreadPoolExecutor ---
+# ---------------------------------------------------------------------
+# 4. Scrapping with ThreadPoolExecutor
+# ---------------------------------------------------------------------
 def update_collection(collection, data:dict):
     if "_id" in data:
         flt = {"_id": data["_id"]}
@@ -163,7 +169,7 @@ def update_collection(collection, data:dict):
         raise ValueError("data must contain '_id' or 'url' for a safe upsert")
     collection.update_one(flt, {"$set": data}, upsert=True)
 
-# OPTIONAL: seed 'pending' documents for observability in Mongo UI
+# Seed 'pending' documents for observability in Mongo UI
 now_utc = datetime.now(timezone.utc)
 seed_ops = []
 for idx, url, title, paper in rows_to_scrape:
@@ -192,7 +198,6 @@ total_to_scrape = len(rows_to_scrape)
 ok = failed = err = 0
 
 with concurrent.futures.ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
-    # submit jobs
     futures = {
     executor.submit(process_url, idx, url, title): (idx, url, title, paper)
     for (idx, url, title, paper) in rows_to_scrape }

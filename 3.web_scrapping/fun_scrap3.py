@@ -13,8 +13,6 @@ def scrape_and_text(url, filename=None):
         article = Article(url, config=config)
         article.download()
         article.parse()
-
-        # You can also access article.title, article.authors, etc.
         text = article.text
 
         # If text is too short, it might be a failed scrape or a video page
@@ -28,5 +26,3 @@ def scrape_and_text(url, filename=None):
         print(f"[Newspaper3k] Error processing {url}: {e}")
         return None
     
-URL = "https://www.dailymail.co.uk/news/article-10456995/Relatives-Bloody-Sunday-victims-hold-remembrance-walk-Londonderry.html"
-# print(scrape_and_text(URL))
