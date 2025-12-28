@@ -1,18 +1,6 @@
-#!/usr/bin/env python3
 """
 Heatmap: papers × time (monthly mean VADER compound)
-
-Rows = paper
-Columns = month
-Cell = mean sentiment.compound
-
-Usage:
-  python plot_sentiment_heatmap_paper_time.py
-
-Before running:
-  export MONGO_URI="mongodb+srv://USER:PASSWORD@HOST/?retryWrites=true&w=majority"
 """
-
 import os
 from pathlib import Path
 
@@ -21,14 +9,12 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pymongo import MongoClient
 
-
 # ----------------------------
 # Config
 # ----------------------------
 MONGO_URI = "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB"
 DB_NAME = "ProjectMaster"
 COLLECTION_NAME = "Texts"
-
 PROTEST_ONLY = True
 
 # Monthly frequency
@@ -41,19 +27,17 @@ MIN_DOCS_PER_PAPER = 20
 TOP_N_PAPERS = 20  # set None to disable
 
 # Missing months handling
-FILL_MISSING_WITH = np.nan  # np.nan keeps missing white; or set 0 for neutral-ish (not recommended)
+FILL_MISSING_WITH = np.nan 
 
 # Output
 OUT_DIR = Path("7.2figures")
 OUT_FILE = OUT_DIR / "sentiment_heatmap_paper_time.png"
 
 
-def load_df() -> pd.DataFrame:
+def load_df():
     if not MONGO_URI:
-        raise RuntimeError(
-            "MONGO_URI is not set. Export it in your shell, e.g.\n"
-            "  export MONGO_URI='mongodb+srv://USER:PASSWORD@HOST/?retryWrites=true&w=majority'"
-        )
+        raise RuntimeError("MONGO_URI is not set. Export it in your shell, e.g.\n"
+                "  export MONGO_URI='mongodb+srv://USER:PASSWORD@HOST/?retryWrites=true&w=majority'")
 
     client = MongoClient(MONGO_URI)
     col = client[DB_NAME][COLLECTION_NAME]
@@ -109,13 +93,12 @@ def make_heatmap(df: pd.DataFrame) -> pd.DataFrame:
             "Lower MIN_DOCS_PER_PAPER or inspect your 'paper' field values."
         )
 
-    # Optionally limit to top-N
+    # Limit to top-N
     if TOP_N_PAPERS is not None:
         top = df["paper"].value_counts().head(TOP_N_PAPERS).index
         df = df[df["paper"].isin(top)].copy()
 
-    # Monthly mean per paper
-    #df["month"] = df["publish_date"].dt.to_period("M").dt.to_timestamp()
+    # Quarterly mean per paper
     df["period"] = df["publish_date"].dt.to_period("Q").dt.start_time  # 3-month blocks
 
     pivot = (
@@ -127,21 +110,20 @@ def make_heatmap(df: pd.DataFrame) -> pd.DataFrame:
     paper_order = df["paper"].value_counts().index.tolist()
     pivot = pivot.reindex(paper_order)
 
-    # Fill missing months if desired
+    # Fill missing months
     if not (isinstance(FILL_MISSING_WITH, float) and np.isnan(FILL_MISSING_WITH)):
         pivot = pivot.fillna(FILL_MISSING_WITH)
 
     return pivot
 
-
-def plot_heatmap(pivot: pd.DataFrame) -> None:
+def plot_heatmap(pivot):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     data = pivot.values
 
     fig, ax = plt.subplots(figsize=(12, max(4, 0.35 * pivot.shape[0])))
 
-    # Use imshow; default colormap is fine (avoid specifying colors unless requested)
+    # Use imshow; default colormap
     im = ax.imshow(data, aspect="auto", interpolation="nearest")
 
     # Ticks and labels
@@ -180,7 +162,6 @@ def main():
     pivot = make_heatmap(df)
     print("Heatmap shape (papers × months):", pivot.shape)
     plot_heatmap(pivot)
-
 
 if __name__ == "__main__":
     main()

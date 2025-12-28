@@ -1,11 +1,5 @@
-"""hf_class_v2.py
-
+"""
 Hugging Face (Transformers) zero-shot classifier helper.
-
-Design goals:
-- Easy-to-read MongoDB fields.
-- Store ONE "final" label field (hf_label_name) + numeric score (hf_confidence).
-- Threshold is passed in at run time but NOT stored per document.
 """
 
 from __future__ import annotations
@@ -29,27 +23,11 @@ _zsc = pipeline(
 )
 
 
-def classify_article_with_hf(
-    title: str,
-    text: str,
-    *,
-    protest_threshold: float = 0.65,
-    max_chars: int = 4000,
-    min_length: int = 200,
-) -> Optional[Dict[str, Any]]:
-    """Classify a document as PROTEST / NOT PROTEST.
-
-    Returns None when text is missing/too short.
-
-    Returns dict keys:
-      - confidence: float  (P(PROTEST))
-      - label: int         (1 for PROTEST, 0 for NOT PROTEST)
-      - label_name: str    ("PROTEST" | "NOT PROTEST")
-      - top_label: str     (argmax label from the ZSC output)
-      - top_score: float
-      - model: str
-      - reason: str        (human readable; includes threshold for transparency)
+def classify_article_with_hf( title, text, *, protest_threshold: float = 0.65, max_chars: int = 4000, min_length: int = 200):
     """
+    Classify a document as PROTEST / NOT PROTEST.
+    Returns None when text is missing or too short.
+   """
     if not text or len(text.strip()) < min_length:
         return None
 
@@ -71,7 +49,7 @@ def classify_article_with_hf(
     top_label = str(labels[0])
     top_score = float(scores[0])
 
-    # Always treat "confidence" as P(PROTEST), regardless of which label is top-1.
+    # Always treat "confidence" as P(PROTEST).
     try:
         protest_idx = labels.index(PROTEST_LABEL)
     except ValueError as e:

@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
 """
-plot_sentiment_over_time.py
-
 Publication date vs sentiment (VADER compound) — PROTEST articles only
 Reads from MongoDB and recreates the plot:
 - scatter of per-article compound scores
@@ -9,10 +6,6 @@ Reads from MongoDB and recreates the plot:
 - rolling quantile band
 - shaded COVID period
 - peak month annotations
-
-Usage:
-  export MONGO_URI="mongodb+srv://USER:PASSWORD@HOST/?retryWrites=true&w=majority"
-  python plot_sentiment_over_time.py
 """
 
 import os
@@ -22,7 +15,6 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from pymongo import MongoClient
-
 
 # ----------------------------
 # Config
@@ -48,11 +40,10 @@ BAND_Q_HIGH = 0.90         # band upper quantile
 # Annotations
 TOP_K_PEAKS = 6            # number of peaks to label
 
-
 # ----------------------------
 # Data loading
 # ----------------------------
-def load_from_mongo() -> pd.DataFrame:
+def load_from_mongo():
     client = MongoClient(MONGO_URI)
     col = client[DB_NAME][COLLECTION_NAME]
 
@@ -80,7 +71,6 @@ def load_from_mongo() -> pd.DataFrame:
 
     return df
 
-
 # ----------------------------
 # Peak detection (monthly local maxima)
 # ----------------------------
@@ -98,22 +88,21 @@ def local_maxima(series: pd.Series) -> pd.Series:
     is_peak = (s > prev_) & (s > next_)
     return s[is_peak]
 
-
 # ----------------------------
 # Plot
 # ----------------------------
-def plot(df: pd.DataFrame, outpath: Path) -> None:
+def plot(df, outpath):
     dates = df[DATE_FIELD]
     y = df["compound"]
 
-    # Daily mean series (reduces overplotting + creates a stable smoothing base)
+    # Daily mean series
     daily = (
         df.set_index(DATE_FIELD)["compound"]
         .resample("D")
         .mean()
     )
 
-    # Rolling smooth + rolling quantile band (on daily means)
+    # Rolling smooth + rolling quantile band
     roll_mean = daily.rolling(ROLLING_DAYS, min_periods=max(7, ROLLING_DAYS // 4)).mean()
     roll_lo = daily.rolling(ROLLING_DAYS, min_periods=max(7, ROLLING_DAYS // 4)).quantile(BAND_Q_LOW)
     roll_hi = daily.rolling(ROLLING_DAYS, min_periods=max(7, ROLLING_DAYS // 4)).quantile(BAND_Q_HIGH)
@@ -124,7 +113,7 @@ def plot(df: pd.DataFrame, outpath: Path) -> None:
 
     fig, ax = plt.subplots(figsize=(16, 6))
 
-    # Scatter (raw article points)
+    # Scatter
     ax.scatter(dates, y, s=18, alpha=0.18)
 
     # Band + trend line
@@ -143,12 +132,11 @@ def plot(df: pd.DataFrame, outpath: Path) -> None:
         0.95,
         "COVID-19 period",
         fontsize=11,
-        va="top"
-    )
+        va="top")
 
     # Peak annotations
     for dt, val in peaks.items():
-        ax.scatter([dt], [val], s=120, zorder=5)  # marker
+        ax.scatter([dt], [val], s=120, zorder=5) 
         ax.annotate(
             f"{dt:%Y-%m}\n{val:.2f}",
             (dt, val),
@@ -176,7 +164,6 @@ def main():
     df = load_from_mongo()
     plot(df, outpath)
     print(f"Saved: {outpath.resolve()}")
-
 
 if __name__ == "__main__":
     main()

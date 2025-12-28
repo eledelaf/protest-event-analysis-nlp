@@ -1,20 +1,10 @@
-"""run_hf_v2.py
-
-Run a Hugging Face zero-shot classifier over a MongoDB collection.
-# 
-Stored fields per document (on success):
-  - hf_confidence: float        # always P(PROTEST) (kept as requested)
-  - hf_label: int               # 1=PROTEST, 0=NOT PROTEST
-  - hf_label_name: str          # "PROTEST" or "NOT PROTEST" (final decision)
-  - hf_top_label: str           # top-1 label returned by ZSC
-  - hf_model: str
-  - hf_reason: str              # includes threshold, but threshold is not stored as its own field
-  - hf_status: "ok" | "skipped_short_text" | "error"
-  - hf_error_message (only if error)
-
-Threshold is passed via CLI (--threshold) or defaults to 0.65.
 """
-#hf_class
+Run a Hugging Face zero-shot classifier over a MongoDB collection.
+If an entry has hf_confidence, reclasify it with the new threshold.
+In other case, classify it, and new hf_confidence.
+
+Threshold default to 0.65.
+"""
 
 from __future__ import annotations
 
@@ -27,11 +17,8 @@ from pymongo import UpdateOne
 from pymongo.errors import PyMongoError
 from tqdm import tqdm
 
-# from hf_class_v2 import classify_article_with_hf
-
 import re
 from bson.decimal128 import Decimal128
-
 
 # ----------------------------
 # CONFIG
@@ -46,8 +33,10 @@ DB_NAME_DEFAULT = "ProjectMaster"
 COLLECTION_NAME_DEFAULT = "sample_texts"
 BATCH_SIZE = 50
 
-
 def parse_args():
+    """
+    Parse command-line arguments.
+    """
     p = argparse.ArgumentParser()
     p.add_argument("--db", type=str, default=DB_NAME_DEFAULT)
     p.add_argument("--collection", type=str, default=COLLECTION_NAME_DEFAULT)
@@ -65,6 +54,9 @@ def parse_args():
 _TOP_RE = re.compile(r"Top='(?P<label>.*?)'\s*\((?P<score>[0-9]*\.?[0-9]+)\)")
 
 def _to_float(x):
+    """
+    Convert a value to float.
+    """
     if x is None:
         return None
     if isinstance(x, (int, float)):
@@ -78,7 +70,10 @@ def _to_float(x):
             return None
     return None
 
-def _extract_top_from_reason(reason: str):
+def _extract_top_from_reason(reason):
+    """
+    Extract top label and score from reason string.
+    """
     if not reason:
         return None, None
     m = _TOP_RE.search(reason)
@@ -86,12 +81,10 @@ def _extract_top_from_reason(reason: str):
         return None, None
     return m.group("label"), _to_float(m.group("score"))
 
-def relabel_from_confidence(col, threshold: float, *, debug_id=None, dry_run=False, limit=0) -> None:
+def relabel_from_confidence(col, threshold, *, debug_id=None, dry_run=False, limit=0):
     """
     Recompute hf_label, hf_label_name, hf_reason for ALL docs with hf_confidence.
-    Atlas-safe: does NOT use no_cursor_timeout; paginates by _id in chunks.
     """
-    # Debug: if user provided a specific _id, just do that one (fast + avoids long runs)
     if debug_id:
         before = col.find_one(
             {"_id": debug_id},
@@ -134,7 +127,7 @@ def relabel_from_confidence(col, threshold: float, *, debug_id=None, dry_run=Fal
     base_query = {"hf_confidence": {"$exists": True, "$ne": None}}
     projection = {"_id": 1, "hf_confidence": 1, "hf_reason": 1}
 
-    READ_BATCH = 1000  # how many docs to read per chunk (safe on Atlas)
+    READ_BATCH = 1000  # how many docs to read per chunk
     last_id = None
 
     scanned = 0
@@ -204,8 +197,10 @@ def relabel_from_confidence(col, threshold: float, *, debug_id=None, dry_run=Fal
 
     print(f"[relabel] scanned={scanned}  convertible_confidence={convertible}  dry_run={dry_run}")
 
-def _flush(col, ops: List[UpdateOne], *, tag: str = "bulk") -> None:
-    """Write a batch of UpdateOne ops safely."""
+def _flush(col, ops, *, tag):
+    """
+    Write a batch of UpdateOne ops safely.
+    """
     if not ops:
         return
     try:
@@ -216,10 +211,9 @@ def _flush(col, ops: List[UpdateOne], *, tag: str = "bulk") -> None:
     except PyMongoError as e:
         print(f"[Mongo] bulk_write error: {e}")
 
-def classify_missing_confidence(col, args) -> None:
+def classify_missing_confidence(col, args):
     """
-    Classify ONLY documents that don't have hf_confidence yet (newly scraped).
-    Atlas-safe pagination by _id.
+    Classify ONLY documents that don't have hf_confidence yet.
     """
     from hf_class import classify_article_with_hf
 
@@ -300,7 +294,7 @@ def classify_missing_confidence(col, args) -> None:
                         "hf_reason": res["reason"],
                         "hf_status": "ok",
                     }
-                    # optional if your classifier returns it
+                    # optional if classifier returns it
                     if "top_label" in res:
                         payload["hf_top_label"] = res["top_label"]
                     if "top_score" in res:
@@ -333,13 +327,12 @@ def main() -> None:
     client = MongoClient(MONGO_URI)
     col = client[args.db][args.collection]
 
-    # --- HYBRID MODE (what you want) ---
     if args.hybrid:
         print("[run_hf] Hybrid mode:")
         print("  1) Relabel docs that already have hf_confidence using current threshold")
         print("  2) Classify docs missing hf_confidence (newly scraped)")
 
-        # 1) relabel existing confidence
+        # 1. relabel existing confidence
         relabel_from_confidence(
             col,
             args.threshold,
@@ -348,7 +341,7 @@ def main() -> None:
             limit=args.limit,
         )
 
-        # 2) classify missing confidence
+        # 2. classify missing confidence
         classify_missing_confidence(col, args)
 
         print("[run_hf] Done (hybrid).")

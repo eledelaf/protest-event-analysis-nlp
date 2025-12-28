@@ -1,19 +1,9 @@
-#!/usr/bin/env python3
 """
 Differences between papers and sentiments (VADER compound).
-
 Creates:
 A) Faceted time series: monthly mean sentiment line per paper (shared y-axis).
 B1) Distribution by paper: violin + boxplot of compound per paper.
 B2) COVID angle: distributions by paper faceted by period (pre/during/post).
-
-Usage:
-  python plot_sentiment_by_paper.py
-
-Before running, set your MongoDB URI securely, e.g. in your terminal:
-  export MONGO_URI="mongodb+srv://USER:PASSWORD@HOST/?retryWrites=true&w=majority"
-
-Then adjust DB_NAME / COLLECTION_NAME below if needed.
 """
 
 import os
@@ -23,7 +13,6 @@ from pathlib import Path
 import pandas as pd
 import matplotlib.pyplot as plt
 from pymongo import MongoClient
-
 
 # ----------------------------
 # Config
@@ -39,14 +28,12 @@ PROTEST_ONLY = True
 MONTH_FREQ = "MS"  # month-start; alternative: "M" for month-end
 
 # Limit papers in faceted plots, to avoid unreadable figures
-MAX_PAPERS_FACET = 12  # set None to disable
+MAX_PAPERS_FACET = 12  
 
 # Drop papers with too few documents, helps stability of distributions
-MIN_DOCS_PER_PAPER = 20  # set to 1 if you want everything
+MIN_DOCS_PER_PAPER = 20  
 
-# Define periods for the COVID comparison 
-# Defaults: WHO pandemic declaration 2020-03-11
-# Most UK legal restrictions ended 2022-02-24
+# Define periods for the COVID 
 PERIODS = [
     {"name": "Pre-COVID",  "start": None,        "end": "2020-03-10"},
     {"name": "COVID",      "start": "2020-03-11","end": "2022-02-24"},
@@ -90,7 +77,7 @@ def _require_env():
         )
 
 
-def load_df() -> pd.DataFrame:
+def load_df():
     _require_env()
 
     client = MongoClient(MONGO_URI)
@@ -124,7 +111,6 @@ def load_df() -> pd.DataFrame:
             + ("- hf_label_name == 'PROTEST'\n" if PROTEST_ONLY else "")
         )
 
-    # sentiment becomes {'compound': ...} due to projection path
     df = df.rename(columns={"sentiment": "sentiment_obj"})
     df["compound"] = df["sentiment_obj"].apply(lambda d: d.get("compound") if isinstance(d, dict) else None)
 
@@ -136,7 +122,7 @@ def load_df() -> pd.DataFrame:
     return df
 
 
-def filter_papers(df: pd.DataFrame) -> pd.DataFrame:
+def filter_papers(df):
     counts = df["paper"].value_counts()
     keep = counts[counts >= MIN_DOCS_PER_PAPER].index
     df2 = df[df["paper"].isin(keep)].copy()
@@ -149,8 +135,8 @@ def filter_papers(df: pd.DataFrame) -> pd.DataFrame:
     return df2
 
 
-def add_period(df: pd.DataFrame) -> pd.DataFrame:
-    def assign(d: pd.Timestamp) -> str:
+def add_period(df):
+    def assign(d):
         for p in PERIODS:
             start = pd.to_datetime(p["start"]) if p["start"] else None
             end = pd.to_datetime(p["end"]) if p["end"] else None
@@ -165,7 +151,7 @@ def add_period(df: pd.DataFrame) -> pd.DataFrame:
     return df2
 
 
-def plot_faceted_monthly_means(df: pd.DataFrame) -> None:
+def plot_faceted_monthly_means(df):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     monthly = (
@@ -214,7 +200,7 @@ def plot_faceted_monthly_means(df: pd.DataFrame) -> None:
     plt.show()
 
 
-def plot_distribution_by_paper(df: pd.DataFrame) -> None:
+def plot_distribution_by_paper(df):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     paper_order = df["paper"].value_counts().index.tolist()
@@ -245,7 +231,7 @@ def plot_distribution_by_paper(df: pd.DataFrame) -> None:
     plt.show()
 
 
-def plot_distribution_by_paper_by_period(df: pd.DataFrame) -> None:
+def plot_distribution_by_paper_by_period(df):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     dfp = add_period(df)

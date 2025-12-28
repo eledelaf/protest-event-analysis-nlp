@@ -1,3 +1,6 @@
+"""
+Check article titles for a specific week end.
+"""
 import pandas as pd
 from pymongo import MongoClient
 from datetime import timedelta
@@ -25,6 +28,3 @@ def show_titles_for_week_end(week_end_str, limit=20):
     df = pd.DataFrame(docs).sort_values(["publish_date", "paper"])
     print(f"\nWeek window: {start} to {end} (week_end={week_end_str})  n_shown={len(df)}")
     print(df.to_string(index=False))
-
-# Example:
-show_titles_for_week_end("2021-01-25")

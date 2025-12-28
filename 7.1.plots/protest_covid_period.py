@@ -1,13 +1,5 @@
-#!/usr/bin/env python3
 """
-counts_covid_periods.py
-
 Counts PROTEST articles by COVID period (pre/during/post), overall and by outlet.
-
-Time periods:
-- Pre-COVID:   2020-01-01 to 2020-03-11  (end EXCLUSIVE)
-- COVID:       2020-03-11 to 2022-02-24  (end EXCLUSIVE)
-- Post-COVID:  2022-02-24 to 2024-12-31  (end INCLUSIVE)
 """
 
 from pymongo import MongoClient
@@ -20,12 +12,12 @@ MONGO_URI = "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.m
 DB_NAME = "ProjectMaster"
 COLLECTION_NAME = "Texts"
 
-# If True, uses your threshold decision stored in hf_reason (recommended if you rely on threshold=0.57)
+# If True, uses your threshold decision stored in hf_reason 
 # If False, uses hf_label_name == "PROTEST"
 USE_THRESHOLD_LABEL = True
 
 # ----------------------------
-# Periods (end is exclusive)
+# Periods
 # ----------------------------
 PERIODS = [
     ("Pre-COVID",  "2020-01-01", "2020-03-11"),
@@ -92,7 +84,7 @@ def main():
     overall_row["TOTAL"] = sum(overall.values())
     df.loc["ALL_OUTLETS"] = pd.Series(overall_row)
 
-    # Nice ordering: ALL_OUTLETS on top
+    # ALL_OUTLETS on top
     df = df.loc[["ALL_OUTLETS"] + [p for p in df.index if p != "ALL_OUTLETS"]]
 
     print("\nPROTEST article counts by COVID period (overall + by outlet)\n")

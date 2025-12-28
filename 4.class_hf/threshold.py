@@ -1,4 +1,7 @@
-#!/usr/bin/env python3
+"""
+This code computes the best threshold for a binary classifier.
+Optimizes F0.5 score.
+"""
 import os
 from pymongo import MongoClient
 
@@ -7,6 +10,9 @@ DB_NAME = "ProjectMaster"
 COLLECTION = "sample_texts"
 
 def metrics(tp, fp, tn, fn):
+    """
+    Computes various metrics from confusion matrix values.
+    """
     total = tp + fp + tn + fn
     acc = (tp + tn) / total if total else 0.0
     prec = tp / (tp + fp) if (tp + fp) else 0.0
@@ -19,6 +25,9 @@ def metrics(tp, fp, tn, fn):
     return acc, prec, rec, f1, f05
 
 def confusion(y_true, scores, t):
+    """
+    Computes confusion matrix values for a given threshold.
+    """
     tp = fp = tn = fn = 0
     for h, s in zip(y_true, scores):
         pred = 1 if s >= t else 0

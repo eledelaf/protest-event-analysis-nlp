@@ -1,25 +1,27 @@
-#!/usr/bin/env python3
+"""
+Analyze VADER sentiment compound scores by COVID period.
+"""
 import pandas as pd
 from pymongo import MongoClient
 from pathlib import Path
 
 # ----------------------------
-# Config (edit these)
+# Config 
 # ----------------------------
 MONGO_URI = "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB"
 DB_NAME = "ProjectMaster"
 COLLECTION_NAME = "Texts"
 
 # Choose how to define "final PROTEST"
-# - If True: uses hf_reason to keep only docs decided as PROTEST by your threshold logic
+# - If True: uses hf_reason to keep only docs decided as PROTEST by threshold logic
 # - If False: uses hf_label_name == "PROTEST"
 USE_FINAL_THRESHOLD_DECISION = True
 
-# COVID period cutoffs (end is exclusive for pre/covid to avoid overlap)
+# COVID period cutoffs 
 PRE_START = "2020-01-01"
 COVID_START = "2020-03-11"
 COVID_END = "2022-02-24"
-POST_END = "2024-12-31"   # used only to cap the analysis window
+POST_END = "2024-12-31"  
 
 OUT_DIR = Path("7.3outputs")
 OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -27,7 +29,7 @@ OUT_DIR.mkdir(parents=True, exist_ok=True)
 # ----------------------------
 # Helpers
 # ----------------------------
-def assign_period(d: pd.Timestamp) -> str:
+def assign_period(d):
     # assumes d is not NaT
     if d < pd.Timestamp(COVID_START):
         return "Pre-COVID"
@@ -46,13 +48,11 @@ def main():
         "sentiment.compound": {"$exists": True},
     }
 
-    # Apply time window (optional but recommended for consistency)
-    # If publish_date is stored as "YYYY-MM-DD" string, this works well lexicographically.
     query["publish_date"]["$gte"] = PRE_START
     query["publish_date"]["$lte"] = POST_END
 
     if USE_FINAL_THRESHOLD_DECISION:
-        # Keeps only the docs where your hf_reason says it ended as PROTEST
+        # Keeps only the docs where hf_reason says it ended as PROTEST
         query["hf_reason"] = {"$regex": r"->\s*PROTEST\s*$"}
     else:
         query["hf_label_name"] = "PROTEST"
@@ -66,7 +66,7 @@ def main():
 
     docs = list(col.find(query, projection))
     if not docs:
-        print("No documents matched your query. Check filters / dates / fields.")
+        print("No documents matched the query. Check filters / dates / fields.")
         return
 
     df = pd.DataFrame(docs).rename(columns={"_id": "url"})

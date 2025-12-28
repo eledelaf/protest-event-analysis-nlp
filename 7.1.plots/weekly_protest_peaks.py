@@ -1,7 +1,4 @@
-#!/usr/bin/env python3
 """
-weekly_protest_peaks.py
-
 Compute weekly counts of PROTEST-labelled articles from a MongoDB collection
 and report the weeks with the highest number of PROTEST articles.
 """
@@ -12,28 +9,19 @@ from typing import Dict, Any, List
 import pandas as pd
 from pymongo import MongoClient
 
-
 # =========================================================
 # CONFIG 
 # =========================================================
 MONGO_URI = "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB"
 DB_NAME = "ProjectMaster"
 COLLECTION_NAME = "Texts"
-# =========================================================
 
-
-def build_query(label_source: str) -> Dict[str, Any]:
+def build_query(label_source):
     """
-    Build a MongoDB query for selecting PROTEST articles.
-
-    label_source:
-      - "hf_reason": select docs whose hf_reason contains '-> PROTEST'
-      - "hf_label_name": select docs where hf_label_name == 'PROTEST'
+    Build a MongoDB query for selecting PROTEST articles.   
     """
-    base: Dict[str, Any] = {
-        "publish_date": {"$exists": True},
-        "paper": {"$exists": True},
-    }
+    base = {"publish_date": {"$exists": True},
+            "paper": {"$exists": True},}
 
     if label_source == "hf_reason":
         base["hf_reason"] = {"$regex": r"->\s*PROTEST\b"}
@@ -45,7 +33,7 @@ def build_query(label_source: str) -> Dict[str, Any]:
     return base
 
 
-def fetch_docs(col, query: Dict[str, Any]) -> pd.DataFrame:
+def fetch_docs(col, query):
     projection = {"_id": 1, "publish_date": 1, "paper": 1}
     rows: List[Dict[str, Any]] = list(col.find(query, projection))
     if not rows:
@@ -53,7 +41,7 @@ def fetch_docs(col, query: Dict[str, Any]) -> pd.DataFrame:
     return pd.DataFrame(rows)
 
 
-def main() -> None:
+def main():
     parser = argparse.ArgumentParser(description="Find weekly peaks in PROTEST article counts.")
     parser.add_argument("--db", default=DB_NAME, help=f"Database name (default: {DB_NAME}).")
     parser.add_argument("--collection", default=COLLECTION_NAME, help=f"Collection name (default: {COLLECTION_NAME}).")
@@ -116,7 +104,6 @@ def main() -> None:
         print(f"\nSaved weekly counts by paper to: {args.out_pivot_csv}")
 
     print(f"\nSaved weekly counts to: {args.out_csv}")
-
 
 if __name__ == "__main__":
     main()

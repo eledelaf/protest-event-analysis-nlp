@@ -1,15 +1,6 @@
-#!/usr/bin/env python3
 """
-clean_mongo_fields.py
-
-Replaces each document in a MongoDB collection with ONLY the fields you want to keep.
-This effectively deletes all other fields (hf_*, sentiment, paper, etc.) in one go.
-
-Works best with MongoDB 4.2+ using $project + $merge.
-If $merge is not permitted, it falls back to a batched ReplaceOne loop.
-
-USAGE:
-  python clean_mongo_fields.py
+Replaces each document in a MongoDB collection with ONLY the fields I want to keep.
+This effectively deletes all other fields in one go.
 """
 
 from pymongo import MongoClient, ReplaceOne
@@ -25,7 +16,7 @@ COLLECTION_NAME = "Texts"
 #COLLECTION_NAME = "sample_texts"
 
 
-# Keep ONLY these fields in the collection (everything else is removed)
+# Keep ONLY these fields in the collection 
 
 KEEP_FIELDS = [
     "_id",
@@ -45,20 +36,17 @@ KEEP_FIELDS = [
     "sentiment"
 ]
 
-
-
-# Optional: make a backup copy collection first (recommended)
+# Mke a backup copy collection first 
 MAKE_BACKUP = True
 #MAKE_BACKUP = False
-BACKUP_SUFFIX = "_backup_before_clean"  # collection will be: COLLECTION_NAME + suffix
+BACKUP_SUFFIX = "_backup_before_clean" 
 
-# If fallback loop is used:
 BATCH_SIZE = 1000
 
 # ----------------------------
 # SCRIPT
 # ----------------------------
-def backup_collection(db, source_name: str, backup_name: str) -> None:
+def backup_collection(db, source_name, backup_name):
     """Create a backup collection using aggregation $out."""
     print(f"[backup] Creating backup collection: {backup_name}")
     db[source_name].aggregate(
@@ -68,7 +56,7 @@ def backup_collection(db, source_name: str, backup_name: str) -> None:
     print("[backup] Done.")
 
 
-def clean_with_merge(db, coll_name: str, keep_fields: list[str]) -> None:
+def clean_with_merge(db, coll_name, keep_fields):
     """
     Preferred method: server-side $project + $merge (replaces docs in-place).
     """
@@ -89,7 +77,7 @@ def clean_with_merge(db, coll_name: str, keep_fields: list[str]) -> None:
     print("[clean] Done via $merge.")
 
 
-def clean_with_replace_loop(db, coll_name: str, keep_fields: list[str], batch_size: int = 1000) -> None:
+def clean_with_replace_loop(db, coll_name, keep_fields, batch_size=1000):
     """
     Fallback method if $merge is not allowed: fetch projected docs and ReplaceOne in batches.
     """
@@ -104,7 +92,6 @@ def clean_with_replace_loop(db, coll_name: str, keep_fields: list[str], batch_si
 
     try:
         for doc in cursor:
-            # doc already contains only projected fields (+ _id)
             ops.append(ReplaceOne({"_id": doc["_id"]}, doc, upsert=False))
 
             if len(ops) >= batch_size:
@@ -124,11 +111,11 @@ def clean_with_replace_loop(db, coll_name: str, keep_fields: list[str], batch_si
     print("[clean] Done via ReplaceOne loop.")
 
 
-def main() -> None:
+def main():
     client = MongoClient(MONGO_URI)
     db = client[DB_NAME]
 
-    # Backup first (optional but smart)
+    # Backup first
     if MAKE_BACKUP:
         backup_name = f"{COLLECTION_NAME}{BACKUP_SUFFIX}"
         # Avoid overwriting an existing backup
@@ -137,7 +124,6 @@ def main() -> None:
             backup_name = f"{backup_name}_{stamp}"
         backup_collection(db, COLLECTION_NAME, backup_name)
 
-    # Try fast in-place clean with $merge, fallback if not allowed
     try:
         clean_with_merge(db, COLLECTION_NAME, KEEP_FIELDS)
     except OperationFailure as e:

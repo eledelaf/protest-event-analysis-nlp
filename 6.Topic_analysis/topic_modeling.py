@@ -1,22 +1,16 @@
 """
-topic_modeling.py
 BERTopic topic modelling for PROTEST articles stored in MongoDB Atlas.
 
-Install:
-  pip install bertopic sentence-transformers umap-learn hdbscan scikit-learn pandas pymongo python-dateutil
-If you get SRV/DNS issues:
-  pip install "pymongo[srv]"
-
 Outputs:
-  outputs/topic_modeling/
+  topic_modeling/
     - articles_with_topics.csv
     - topic_info.csv
     - representative_docs.csv
     - topic_share_by_time.csv
     - topic_share_by_paper.csv
     - topic_share_by_paper_time.csv
-    - topics_barchart.html (if available)
-    - topics_map.html (if available)
+    - topics_barchart.html
+    - topics_map.html 
 """
 
 from __future__ import annotations
@@ -34,14 +28,12 @@ from bertopic import BERTopic
 from sentence_transformers import SentenceTransformer
 from sklearn.feature_extraction.text import CountVectorizer
 
-
 # -----------------------------
 # MongoDB connection
 # -----------------------------
 MONGO_URI = "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB"
 DB_NAME = "ProjectMaster"
 COLLECTION_NAME = "Texts"
-
 
 # -----------------------------
 # Config
@@ -52,26 +44,24 @@ class MongoConfig:
     db_name: str
     collection_name: str
 
-
 @dataclass
 class TopicConfig:
     # Mongo fields
     text_field: str = "text"
     paper_field: str = "paper"
-    date_field: str = "publish_date"   # matches your Mongo doc
+    date_field: str = "publish_date"  
     protest_filter: Dict[str, Any] = None
 
     # Time binning: "M" month, "Q" quarter (3-month bins)
     time_bin: str = "Q"
 
     # Data cleaning / filtering
-    min_chars: int = 80  # adjust if your texts are very short (e.g., 50)
+    min_chars: int = 80 
 
     # Topic model knobs
     embedding_model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
     min_topic_size: int = 40
-    nr_topics: Optional[int] = None  # set e.g. 20 to force fewer topics
-
+    nr_topics: Optional[int] = None 
 
 # -----------------------------
 # Helpers
@@ -84,8 +74,7 @@ BOILERPLATE_PATTERNS = [
     r"^Read more.*$",
 ]
 
-
-def clean_text(text: Any) -> str:
+def clean_text(text):
     if not isinstance(text, str):
         return ""
     t = re.sub(r"\s+", " ", text).strip()
@@ -95,8 +84,7 @@ def clean_text(text: Any) -> str:
     t = re.sub(r"\s+", " ", t).strip()
     return t.strip()
 
-
-def parse_date(x: Any) -> Optional[pd.Timestamp]:
+def parse_date(x):
     if x is None:
         return None
     if isinstance(x, pd.Timestamp):
@@ -110,7 +98,7 @@ def parse_date(x: Any) -> Optional[pd.Timestamp]:
             return None
 
 
-def to_time_bin(ts: pd.Timestamp, freq: str) -> pd.Timestamp:
+def to_time_bin(ts: pd.Timestamp, freq):
     if freq == "M":
         return ts.to_period("M").to_timestamp()
     if freq == "Q":
@@ -121,7 +109,7 @@ def to_time_bin(ts: pd.Timestamp, freq: str) -> pd.Timestamp:
 # -----------------------------
 # Data load
 # -----------------------------
-def load_protest_articles(mcfg: MongoConfig, cfg: TopicConfig) -> pd.DataFrame:
+def load_protest_articles(mcfg, cfg):
     client = MongoClient(mcfg.uri, serverSelectionTimeoutMS=8000)
     # quick connectivity check (gives much clearer errors)
     client.admin.command("ping")
@@ -168,7 +156,7 @@ def load_protest_articles(mcfg: MongoConfig, cfg: TopicConfig) -> pd.DataFrame:
 # -----------------------------
 # Topic modelling
 # -----------------------------
-def fit_bertopic(df: pd.DataFrame, cfg: TopicConfig) -> Tuple[BERTopic, List[int], List[float]]:
+def fit_bertopic(df, cfg):
     docs = df["text"].tolist()
 
     embedder = SentenceTransformer(cfg.embedding_model_name)
@@ -197,7 +185,7 @@ def fit_bertopic(df: pd.DataFrame, cfg: TopicConfig) -> Tuple[BERTopic, List[int
     return topic_model, topics, max_prob
 
 
-def build_topic_tables(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
+def build_topic_tables(df):
     # shares by time bin
     tmp = df.groupby(["time_bin", "topic"]).size().rename("n").reset_index()
     tmp["share"] = tmp.groupby("time_bin")["n"].transform(lambda x: x / x.sum())
@@ -218,7 +206,7 @@ def build_topic_tables(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame, pd
     return topic_by_time, topic_by_paper, topic_by_paper_time
 
 
-def export_results(out_dir: str, df: pd.DataFrame, topic_model: BERTopic) -> None:
+def export_results(out_dir, df, topic_model: BERTopic):
     os.makedirs(out_dir, exist_ok=True)
 
     df.to_csv(os.path.join(out_dir, "articles_with_topics.csv"), index=False)
@@ -233,7 +221,6 @@ def export_results(out_dir: str, df: pd.DataFrame, topic_model: BERTopic) -> Non
             rep_rows.append({"topic": topic_id, "rank": i + 1, "doc_snippet": d[:400]})
     pd.DataFrame(rep_rows).to_csv(os.path.join(out_dir, "representative_docs.csv"), index=False)
 
-    # Optional interactive HTML
     try:
         topic_model.visualize_barchart(top_n_topics=20).write_html(os.path.join(out_dir, "topics_barchart.html"))
     except Exception:
@@ -245,7 +232,7 @@ def export_results(out_dir: str, df: pd.DataFrame, topic_model: BERTopic) -> Non
         pass
 
 
-def main() -> None:
+def main():
     mongo = MongoConfig(uri=MONGO_URI, db_name=DB_NAME, collection_name=COLLECTION_NAME)
 
     cfg = TopicConfig(
@@ -253,8 +240,8 @@ def main() -> None:
         paper_field="paper",
         date_field="publish_date",
         protest_filter={"hf_label_name": "PROTEST", "status": "done"},
-        time_bin="Q",          # 3-month bins (quarters)
-        min_chars=80,          # lower if many texts are short
+        time_bin="Q",          
+        min_chars=80,          
         min_topic_size=40,
         nr_topics=None,
     )

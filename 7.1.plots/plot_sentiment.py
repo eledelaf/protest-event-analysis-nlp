@@ -1,6 +1,5 @@
-#!/usr/bin/env python3
 """
-Overall sentiment (VADER compound), not split by paper.
+Overall sentiment using VADER compound
 
 Creates:
 A) Time series: monthly mean compound (overall).
@@ -21,20 +20,15 @@ from pymongo import MongoClient
 MONGO_URI = "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB"
 DB_NAME = "ProjectMaster"
 COLLECTION_NAME = "Texts"
-
-# Filter: keep only protest-labelled articles.
 PROTEST_ONLY = True
 
 # Monthly aggregation frequency for time series
-MONTH_FREQ = "MS"  # month-start; alternative: "M" for month-end
+MONTH_FREQ = "MS"  
 
-# Optional: drop very short texts / junk if you want (set None to disable)
-MIN_TEXT_CHARS = None  # e.g. 80
+# Drop very short texts 
+MIN_TEXT_CHARS = 80
 
-# Define periods for the COVID comparison
-# WHO pandemic declaration 2020-03-11
-# Most UK legal restrictions ended 2022-02-24 (your chosen cutoff)
-
+# COVID periods
 PERIODS = [
     {"name": "Pre-COVID",  "start": None,         "end": "2020-03-10"},
     {"name": "COVID",      "start": "2020-03-11", "end": "2022-02-24"},
@@ -78,8 +72,7 @@ def _require_env():
             "  export MONGO_URI='mongodb+srv://USER:PASSWORD@HOST/?retryWrites=true&w=majority'"
         )
 
-
-def load_df() -> pd.DataFrame:
+def load_df():
     _require_env()
 
     client = MongoClient(MONGO_URI)
@@ -114,7 +107,7 @@ def load_df() -> pd.DataFrame:
             + ("- hf_label_name == 'PROTEST'\n" if PROTEST_ONLY else "")
         )
 
-    # sentiment becomes {'compound': ...} due to projection path
+    # sentiment becomes {'compound': ...} 
     df = df.rename(columns={"sentiment": "sentiment_obj"})
     df["compound"] = df["sentiment_obj"].apply(
         lambda d: d.get("compound") if isinstance(d, dict) else None
@@ -132,9 +125,8 @@ def load_df() -> pd.DataFrame:
     df = df.dropna(subset=["publish_date", "compound"]).sort_values("publish_date")
     return df[keep_cols].copy()
 
-
-def add_period(df: pd.DataFrame) -> pd.DataFrame:
-    def assign(d: pd.Timestamp) -> str:
+def add_period(df):
+    def assign(d):
         for p in PERIODS:
             start = pd.to_datetime(p["start"]) if p["start"] else None
             end = pd.to_datetime(p["end"]) if p["end"] else None
@@ -148,8 +140,7 @@ def add_period(df: pd.DataFrame) -> pd.DataFrame:
     df2["period"] = df2["publish_date"].apply(assign)
     return df2
 
-
-def plot_monthly_mean(df: pd.DataFrame) -> None:
+def plot_monthly_mean(df):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     monthly = (
@@ -178,8 +169,7 @@ def plot_monthly_mean(df: pd.DataFrame) -> None:
     print(f"Saved: {OUT_A.resolve()}")
     plt.show()
 
-
-def plot_distribution_overall(df: pd.DataFrame) -> None:
+def plot_distribution_overall(df):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     data = df["compound"].dropna().values
@@ -207,7 +197,7 @@ def plot_distribution_overall(df: pd.DataFrame) -> None:
     plt.show()
 
 
-def plot_distribution_by_period(df: pd.DataFrame) -> None:
+def plot_distribution_by_period(df):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     dfp = add_period(df)

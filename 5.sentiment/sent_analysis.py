@@ -4,11 +4,14 @@ from pymongo.mongo_client import MongoClient
 from pymongo import UpdateOne
 from tqdm import tqdm
 
-# --- 0. NLTK setup (downloads lexicon the first time only) ---
+# ---------------------------------------------------------------------
+# 0. NLTK setup
+# ---------------------------------------------------------------------
 nltk.download("vader_lexicon")
 
-# --- 1. MongoDB connection ---
-
+# ---------------------------------------------------------------------
+# 1. MongoDB connection
+# ---------------------------------------------------------------------
 MONGO_URI = "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB"
 DB_NAME = "ProjectMaster"
 #COLLECTION_NAME = "sample_texts"
@@ -18,10 +21,14 @@ client = MongoClient(MONGO_URI)
 db = client[DB_NAME]
 col = db[COLLECTION_NAME]
 
-# --- 2. VADER initialisation ---
+# ---------------------------------------------------------------------
+# 2. VADER initialisation
+# ---------------------------------------------------------------------
 sia = SentimentIntensityAnalyzer()
 
-# --- 3. Helper to build the text we analyse ---
+# ---------------------------------------------------------------------
+# 3. Helper to build the text we analyse
+# ---------------------------------------------------------------------
 def build_text(doc, max_chars=4000):
     """
     Build the text used for sentiment from the MongoDB document.
@@ -30,8 +37,6 @@ def build_text(doc, max_chars=4000):
     title = doc.get("title", "") or ""
     body = doc.get("text", "") or ""
     combined = (title + "\n\n" + body).strip()
-    # Optional: truncate to avoid super long texts (VADER handles long text fine
-    # but this keeps things more controlled)
     return combined[:max_chars]
 
 
@@ -49,8 +54,9 @@ def label_from_compound(c):
 
 def main():
     BATCH_SIZE = 100
-
-    # --- 4. Query: which docs to sentiment-annotate? ---
+    # ---------------------------------------------------------------------
+    # 4. Query: which docs to sentiment-annotate?
+    # ---------------------------------------------------------------------
     query = {
         "hf_label_name": "PROTEST",      
         "sentiment": {"$exists": False},   # only process docs without sentiment yet
@@ -92,7 +98,6 @@ def main():
             col.bulk_write(batch_ops)
             batch_ops = []
 
-    # Flush remaining updates
     if batch_ops:
         col.bulk_write(batch_ops)
 

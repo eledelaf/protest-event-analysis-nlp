@@ -1,4 +1,6 @@
-#!/usr/bin/env python3
+"""
+Determine protest article counts by year and outlet.
+"""
 import pandas as pd
 from pymongo import MongoClient
 
@@ -10,11 +12,9 @@ DB_NAME = "ProjectMaster"
 COLLECTION_NAME = "Texts"
 
 # Define what "PROTEST" means:
-#   "reason" = use hf_reason ending with "-> PROTEST" (recommended if label mismatches exist)
-#   "label"  = use hf_label_name == "PROTEST"
-LABEL_MODE = "reason"   # change to "label" if you prefer
+LABEL_MODE = "reason" 
 
-# If True, only count articles that already have sentiment (analysis corpus for sentiment)
+# If True, only count articles that already have sentiment
 REQUIRE_SENTIMENT = False
 
 YEAR_MIN = 2020
@@ -23,16 +23,11 @@ YEAR_MAX = 2024
 OUT_PIVOT_CSV = "7.3outputs/protest_counts_by_year_outlet.csv"
 OUT_LONG_CSV = "7.3outputs/protest_counts_long.csv"
 
-#OUT_PIVOT_CSV = "protest_counts_by_year_outlet.csv"
-#OUT_LONG_CSV = "protest_counts_long.csv"
-
-
-def build_match(label_mode: str, require_sentiment: bool) -> dict:
+def build_match(label_mode, require_sentiment):
     match = {
         "status": "done",
         "paper": {"$exists": True, "$ne": None, "$ne": ""},
         "publish_date": {"$exists": True, "$ne": None, "$ne": ""},
-        # expects format YYYY-MM-DD
         "publish_date": {"$regex": r"^\d{4}-\d{2}-\d{2}$"},
     }
 
@@ -45,7 +40,6 @@ def build_match(label_mode: str, require_sentiment: bool) -> dict:
         match["sentiment.compound"] = {"$exists": True}
 
     return match
-
 
 def main():
     client = MongoClient(MONGO_URI)
@@ -110,7 +104,6 @@ def main():
 
     print(f"\nSaved pivot table to: {OUT_PIVOT_CSV}")
     print(f"Saved long table to:  {OUT_LONG_CSV}")
-
 
 if __name__ == "__main__":
     main()

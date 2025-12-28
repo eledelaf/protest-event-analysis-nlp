@@ -1,3 +1,7 @@
+"""
+Check sentiment distribution across newspapers.
+"""
+
 from pymongo.mongo_client import MongoClient
 from pprint import pprint
 

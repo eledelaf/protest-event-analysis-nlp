@@ -1,15 +1,6 @@
-#!/usr/bin/env python3
 """
-Pre vs during vs post COVID distribution of sentiment (VADER compound).
-
-Creates density curves for each period, so you can see if the *distribution* shifts
-(not only the mean).
-
-Usage:
-  python plot_sentiment_density_by_period.py
-
-Before running:
-  export MONGO_URI="mongodb+srv://USER:PASSWORD@HOST/?retryWrites=true&w=majority"
+Pre vs during vs post COVID distribution of sentiment using VADER compound.
+Creates density curves for each period, to see if the distribution shifts..
 """
 
 import os
@@ -21,7 +12,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pymongo import MongoClient
 
-
 # ----------------------------
 # Config
 # ----------------------------
@@ -31,7 +21,7 @@ COLLECTION_NAME = "Texts"
 
 PROTEST_ONLY = True
 
-# Define periods (edit to match your methodology)
+# COVID Periods
 PERIODS = [
     {"name": "Pre-COVID",  "start": None,        "end": "2020-03-10"},
     {"name": "COVID",      "start": "2020-03-11","end": "2022-02-24"},
@@ -40,14 +30,14 @@ PERIODS = [
 
 # Density estimation settings
 BINS = 200  # x-grid resolution
-SMOOTHING_SIGMA = 2.5  # gaussian smoothing over histogram bins (in bins). Increase for smoother curves.
+SMOOTHING_SIGMA = 2.5  #  histogram bins
 
 # Output
 OUT_DIR = Path("7.2figures")
 OUT_FILE = OUT_DIR / "sentiment_density_by_period.png"
 
 
-def load_df() -> pd.DataFrame:
+def load_df():
     if not MONGO_URI:
         raise RuntimeError(
             "MONGO_URI is not set. Export it in your shell, e.g.\n"
@@ -86,8 +76,8 @@ def load_df() -> pd.DataFrame:
     return df
 
 
-def assign_period(df: pd.DataFrame) -> pd.DataFrame:
-    def which_period(d: pd.Timestamp) -> str:
+def assign_period(df):
+    def which_period(d):
         for p in PERIODS:
             start = pd.to_datetime(p["start"]) if p["start"] else None
             end = pd.to_datetime(p["end"]) if p["end"] else None
@@ -108,7 +98,7 @@ def assign_period(df: pd.DataFrame) -> pd.DataFrame:
     return df2
 
 
-def gaussian_smooth(y: np.ndarray, sigma_bins: float) -> np.ndarray:
+def gaussian_smooth(y, sigma_bins):
     """
     Simple Gaussian smoothing implemented via convolution (no SciPy dependency).
     sigma_bins is in units of histogram bins.
@@ -123,10 +113,10 @@ def gaussian_smooth(y: np.ndarray, sigma_bins: float) -> np.ndarray:
     return np.convolve(y, kernel, mode="same")
 
 
-def plot_density(df: pd.DataFrame) -> None:
+def plot_density(df):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
-    # Fixed x grid over [-1, 1] for VADER compound
+    # x grid over [-1, 1] for VADER compound
     x_min, x_max = -1.0, 1.0
     edges = np.linspace(x_min, x_max, BINS + 1)
     centers = (edges[:-1] + edges[1:]) / 2
@@ -163,7 +153,6 @@ def plot_density(df: pd.DataFrame) -> None:
 
     plt.show()
 
-
 def main():
     df = load_df()
     df = assign_period(df)
@@ -174,7 +163,6 @@ def main():
     print(df["period"].value_counts().to_string())
 
     plot_density(df)
-
 
 if __name__ == "__main__":
     main()

@@ -1,15 +1,7 @@
 #!/usr/bin/env python3
 """
 Sentiment composition over time (VADER label):
-Stacked area chart (monthly) showing % of articles that are positive / neutral / negative.
-
-Usage:
-  python plot_sentiment_composition_over_time.py
-
-Before running:
-  export MONGO_URI="mongodb+srv://USER:PASSWORD@HOST/?retryWrites=true&w=majority"
-
-Then adjust DB_NAME / COLLECTION_NAME below if needed.
+Stacked area chart (monthly) showing percentage of articles that are positive / neutral / negative.
 """
 
 import os
@@ -19,33 +11,25 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from pymongo import MongoClient
 
-
 # ----------------------------
 # Config 
 # ----------------------------
 MONGO_URI = "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB"
 DB_NAME = "ProjectMaster"
 COLLECTION_NAME = "Texts"
-
-
-# Recommended if your analysis focuses on protest reporting
 PROTEST_ONLY = True
 
-# Monthly aggregation frequency
-MONTH_FREQ = "MS"  # month start
+MONTH_FREQ = "MS"  # Monthly aggregation frequency
 
-# Optional COVID shading (edit to match your methodology)
+# Optional COVID shading
 SHADE_COVID = True
-COVID_PERIODS = [
-    {"start": "2020-03-11", "end": "2022-02-24", "label": "COVID-19 period"},
-]
+COVID_PERIODS = [{"start": "2020-03-11", "end": "2022-02-24", "label": "COVID-19 period"}]
 
 # Output
 OUT_DIR = Path("7.2figures")
 OUT_FILE = OUT_DIR / "sentiment_composition_over_time.png"
 
-
-def load_labels_from_mongo() -> pd.DataFrame:
+def load_labels_from_mongo():
     if not MONGO_URI:
         raise RuntimeError(
             "MONGO_URI is not set. Export it in your shell, e.g.\n"
@@ -55,10 +39,9 @@ def load_labels_from_mongo() -> pd.DataFrame:
     client = MongoClient(MONGO_URI)
     col = client[DB_NAME][COLLECTION_NAME]
 
-    query = {
-        "publish_date": {"$exists": True},
-        "sentiment.label": {"$exists": True},
-    }
+    query = {"publish_date": {"$exists": True},
+            "sentiment.label": {"$exists": True},}
+    
     if PROTEST_ONLY:
         query["hf_label_name"] = "PROTEST"
 
@@ -80,14 +63,14 @@ def load_labels_from_mongo() -> pd.DataFrame:
             + ("- hf_label_name == 'PROTEST'\n" if PROTEST_ONLY else "")
         )
 
-    # Due to projection path, sentiment becomes {'label': ...}
+    # Here sentiment becomes {'label': ...}
     df = df.rename(columns={"sentiment": "sentiment_obj"})
     df["label"] = df["sentiment_obj"].apply(lambda d: d.get("label") if isinstance(d, dict) else None)
 
     df["publish_date"] = pd.to_datetime(df["publish_date"], errors="coerce")
     df["label"] = df["label"].astype(str).str.lower().str.strip()
 
-    # Keep only expected labels (drop anything unexpected)
+    # Keep only expected labels
     keep = {"positive", "neutral", "negative"}
     df = df[df["label"].isin(keep)].dropna(subset=["publish_date"]).copy()
     df = df.sort_values("publish_date")
@@ -101,12 +84,12 @@ def load_labels_from_mongo() -> pd.DataFrame:
     return df
 
 
-def plot_composition(df: pd.DataFrame) -> None:
+def plot_composition(df):
     OUT_DIR.mkdir(parents=True, exist_ok=True)
 
     df["month"] = df["publish_date"].dt.to_period("M").dt.to_timestamp()
 
-    # Counts by month × label
+    # Counts by month per label
     counts = (
         df.groupby(["month", "label"])
           .size()
@@ -114,7 +97,7 @@ def plot_composition(df: pd.DataFrame) -> None:
           .sort_index()
     )
 
-    # Ensure all three columns exist
+    # Ensure all columns exist
     for col in ["negative", "neutral", "positive"]:
         if col not in counts.columns:
             counts[col] = 0
@@ -159,9 +142,7 @@ def plot_composition(df: pd.DataFrame) -> None:
     fig.tight_layout()
     fig.savefig(OUT_FILE, dpi=300)
     print(f"Saved: {OUT_FILE.resolve()}")
-
     plt.show()
-
 
 def main():
     df = load_labels_from_mongo()
@@ -170,7 +151,6 @@ def main():
     print("Label counts:")
     print(df["label"].value_counts().to_string())
     plot_composition(df)
-
 
 if __name__ == "__main__":
     main()

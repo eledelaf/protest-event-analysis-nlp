@@ -1,3 +1,6 @@
+"""
+Check sentiment distribution.
+"""
 from pymongo.mongo_client import MongoClient
 from pprint import pprint
 
