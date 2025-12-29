@@ -28,3 +28,5 @@ def show_titles_for_week_end(week_end_str, limit=20):
     df = pd.DataFrame(docs).sort_values(["publish_date", "paper"])
     print(f"\nWeek window: {start} to {end} (week_end={week_end_str})  n_shown={len(df)}")
     print(df.to_string(index=False))
+
+show_titles_for_week_end("2020-06-29", limit=20)

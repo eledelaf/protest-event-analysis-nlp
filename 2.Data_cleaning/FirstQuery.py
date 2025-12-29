@@ -88,7 +88,7 @@ def is_excluded_title(title):
 # ---------------------------------------------------------------------
 # 1. Load raw URLs from MediaCloud
 # ---------------------------------------------------------------------
-file_path = "/Users/elenadelafuente/Desktop/MASTER/TFM/Project/Project-Master/2.Data_cleaning/URLS.csv"
+file_path = "/Users/elenadelafuente/Desktop/MASTER/TFM/Project/Project-Master/1.MediaCloud/URLS.csv"
 df = pd.read_csv(file_path, sep=';', skiprows=1, header=None)
 df = df.iloc[1:].reset_index(drop=True)
 
