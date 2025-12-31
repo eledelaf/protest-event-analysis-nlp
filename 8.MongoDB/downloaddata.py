@@ -37,5 +37,5 @@ def export_collection(collection_name: str, out_path: str):
     print(f"Done. Exported {n} documents.")
 
 if __name__ == "__main__":
-    export_collection(COLLECTION_NAME_Texts, "Texts.jsonl.gz")
-    export_collection(COLLECTION_NAME_sample, "sample_texts.jsonl.gz")
+    export_collection(COLLECTION_NAME_Texts, "8.MongoDB/Texts.jsonl.gz")
+    export_collection(COLLECTION_NAME_sample, "8.MongoDB/sample_texts.jsonl.gz")

@@ -74,7 +74,7 @@ In order to check the data set, the examiner has access to the MongoDB account I
 user = eledelaf@ucm.es
 pasword = Dukvyn-kynmi5-hurmed
 
-If this does not work there is a copy of the two data bases in 8.MongoDB
+If this does not work there is a copy of the two data bases in 8.MongoDB, with a code that downloads the data directly from MongoDB
 
 ## Order of the code:
 1. Filer MediaCloud URLs: python 2.Data_cleaning/FirstQuery.py
