@@ -11,7 +11,7 @@ It collects candidate protest-related articles from MediaCloud, scrapes full tex
 The project code is organised into folders that follow the pipeline stages.
 * human_sample.csv: CSV containing the manually labelled sample used for evaluation.
 
-### 1.MediaCloud
+### 1.MediaCloud:
     * URLS.numbers: Raw CSV export downloaded from MediaCloud.
 
 ### 2.Data_cleaning
@@ -70,6 +70,9 @@ The project code is organised into folders that follow the pipeline stages.
 # How to run the code
 
 ##  MongoDB access
+In order to check the data set, the examiner has access to the MongoDB account I created for the project.
+user = eledelaf@ucm.es
+pasword = Dukvyn-kynmi5-hurmed
 
 ## Order of the code:
 1. Filer MediaCloud URLs: python 2.Data_cleaning/FirstQuery.py
