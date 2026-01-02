@@ -23,6 +23,7 @@ The project code is organised into folders that follow the pipeline stages.
     * URLs_clean.csv: Output of FirstQuery.py.
 
 ### 4.class_hf
+    * human_sample.csv: Csv file manually labeled, then uploaded to MongoDB to use threshold.py.
     * threshold.py: Finds/validates the classification threshold (used to convert model confidence into PROTEST / NOT_PROTEST).
     * hf_class.py: Classification functions (Hugging Face zero-shot classification).
     * run_hf.py: Runs the classifier over the MongoDB collection and writes labels scores back to MongoDB.
