@@ -6,17 +6,17 @@ from pymongo import MongoClient
 from bson.json_util import dumps
 
 MONGO_URI = "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB"
-DB_NAME_DEFAULT = "ProjectMaster"
-COLLECTION_NAME_Texts = "Texts"
-COLLECTION_NAME_sample = "sample_texts"
+DB_NAME = "ProjectMaster"
+COLLECTION_NAME_TEXTS = "Texts"
+COLLECTION_NAME_SAMPLE = "sample_texts"
 BATCH_SIZE = 50
 
 def export_collection(collection_name: str, out_path: str):
     client = MongoClient(MONGO_URI)
-    coll = client[DB_NAME_DEFAULT][collection_name]
+    coll = client[DB_NAME][collection_name]
 
     total = coll.estimated_document_count()
-    print(f"Exporting {total} docs from {DB_NAME_DEFAULT}.{collection_name} -> {out_path}")
+    print(f"Exporting {total} docs from {DB_NAME}.{collection_name} -> {out_path}")
 
     #cursor = coll.find({}, no_cursor_timeout=True).batch_size(BATCH_SIZE)
     cursor = coll.find({}).batch_size(BATCH_SIZE)
@@ -37,5 +37,5 @@ def export_collection(collection_name: str, out_path: str):
     print(f"Done. Exported {n} documents.")
 
 if __name__ == "__main__":
-    export_collection(COLLECTION_NAME_Texts, "8.MongoDB/Texts.jsonl.gz")
-    export_collection(COLLECTION_NAME_sample, "8.MongoDB/sample_texts.jsonl.gz")
+    export_collection(COLLECTION_NAME_TEXTS, "8.MongoDB/Texts.jsonl.gz")
+    export_collection(COLLECTION_NAME_SAMPLE, "8.MongoDB/sample_texts.jsonl.gz")
