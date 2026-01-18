@@ -8,7 +8,8 @@ import pandas as pd
 # ----------------------------
 # Config
 # ----------------------------
-MONGO_URI = "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB"
+# MONGO_URI = "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB"
+MONGO_URI = " "
 DB_NAME = "ProjectMaster"
 COLLECTION_NAME = "Texts"
 
