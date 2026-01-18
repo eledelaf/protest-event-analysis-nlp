@@ -23,10 +23,8 @@ from bson.decimal128 import Decimal128
 # ----------------------------
 # CONFIG
 # ----------------------------
-MONGO_URI = os.getenv(
-    "MONGO_URI",
-    "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB"
-)
+#MONGO_URI = os.getenv("MONGO_URI","mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB")
+MONNGO_URI = ""
 
 DB_NAME_DEFAULT = "ProjectMaster"
 #COLLECTION_NAME_DEFAULT = "Texts"
