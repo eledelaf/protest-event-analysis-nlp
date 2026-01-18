@@ -61,7 +61,7 @@ INPUT_FILE = "3.web_scrapping/URLS_clean.csv"
 # ---------------------------------------------------------------------
 # 0.2 Connection to Mongo
 # ---------------------------------------------------------------------
-Mongo_uri = "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB"
+Mongo_uri = ""#"mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB"
 client = MongoClient(Mongo_uri)
 try:
     client.admin.command('ping')
