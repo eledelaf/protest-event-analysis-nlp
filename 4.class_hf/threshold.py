@@ -5,7 +5,8 @@ Optimizes F0.5 score.
 import os
 from pymongo import MongoClient
 
-MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB")
+#MONGO_URI = os.getenv("MONGO_URI", "mongodb+srv://eledelaf:Ly5BX57aSXIzJVde@articlesprotestdb.bk5rtxs.mongodb.net/?retryWrites=true&w=majority&appName=ArticlesProtestDB")
+MONGO_URI = ""
 DB_NAME = "ProjectMaster"
 COLLECTION = "sample_texts"
 
