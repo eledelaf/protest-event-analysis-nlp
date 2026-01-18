@@ -71,11 +71,7 @@ The project code is organised into folders that follow the pipeline stages.
 # How to run the code
 
 ##  MongoDB access
-In order to check the data set, the examiner has access to the MongoDB account I created for the project.
-user = eledelaf@ucm.es
-pasword = Dukvyn-kynmi5-hurmed
-
-If this does not work there is a copy of the two data bases in 8.MongoDB, with a code that downloads the data directly from MongoDB into two .jsonl files. 
+In order to check the data set, there is a copy of the two data bases in 8.MongoDB, with a code that downloads the data directly from MongoDB into two .jsonl files. 
 
 ## Order of the code:
 1. Filer MediaCloud URLs: python 2.Data_cleaning/FirstQuery.py
