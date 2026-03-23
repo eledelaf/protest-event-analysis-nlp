@@ -1,0 +1,13 @@
+pandas
+numpy
+pymongo
+transformers
+bertopic
+sentence-transformers
+scikit-learn
+nltk
+vaderSentiment
+newspaper3k
+matplotlib
+tqdm
+python-dotenv

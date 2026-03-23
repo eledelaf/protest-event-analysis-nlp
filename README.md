@@ -1,93 +1,188 @@
-# Applying NLP to Protest Event Analysis (UK Media, pre/during/post COVID)
+# Applying NLP to Protest Event Analysis
+### A Case Study of UK Media Before, During and After COVID-19
 
-## Overview
-This project automates key steps of Protest Event Analysis (PEA) using UK news coverage before and after COVID-19.
-It collects candidate protest-related articles from MediaCloud, scrapes full text, stores data in MongoDB, applies a zero-shot protest/not-protest classifier, runs VADER sentiment analysis, and performs topic modelling to study issue patterns over time and across outlets.
+An end-to-end NLP pipeline that automates Protest Event Analysis (PEA) on UK news coverage. The system collects articles from MediaCloud, scrapes full text, classifies protest relevance using a zero-shot transformer, and analyses sentiment and topics across outlets and time periods.
 
-**Outlets:** The Guardian, Daily Mail, Evening Standard  
-**Period:** 2020-01-01 to 2024-12-31
+![Python](https://img.shields.io/badge/Python-3776AB?style=flat&logo=python&logoColor=white)
+![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=flat&logo=mongodb&logoColor=white)
+![Hugging Face](https://img.shields.io/badge/Hugging%20Face-FFD21E?style=flat&logo=huggingface&logoColor=black)
+![Pandas](https://img.shields.io/badge/Pandas-150458?style=flat&logo=pandas&logoColor=white)
+![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat&logo=scikitlearn&logoColor=white)
 
-## Organisation of the code
-The project code is organised into folders that follow the pipeline stages.
-* human_sample.csv: CSV containing the manually labelled sample used for evaluation.
+---
 
-### 1.MediaCloud:
-    * URLS.numbers: Raw CSV export downloaded from MediaCloud.
+## Objective
+
+Protest Event Analysis traditionally requires manual coding of newspaper articles — a process that is slow and hard to scale. This project builds a reproducible, automated pipeline to:
+
+- **Detect** which articles report concrete protest events (zero-shot classification)
+- **Measure** the tone of protest coverage across outlets (VADER sentiment)
+- **Discover** recurring themes and how they shift over time (BERTopic topic modelling)
+- **Compare** coverage patterns before, during, and after the COVID-19 pandemic
+
+**Outlets:** The Guardian (centre-left), Daily Mail (right-wing), Evening Standard (London-focused)
+**Period:** January 2020 – December 2024
+
+> This project was submitted as an MSc dissertation at Birkbeck, University of London. The full dissertation is available in [`TFM_final.pdf`](TFM_final.pdf).
+
+---
+
+## Pipeline Architecture
+
+```
+MediaCloud (59,742 candidate URLs)
+ └── 1. Filter by outlet & date range         → 12,506 URLs
+       └── 2. Scrape full article text         → 12,496 articles stored in MongoDB
+             └── 3. Zero-shot classification   → 3,046 PROTEST / 9,256 NOT PROTEST
+                   ├── 4. Sentiment analysis   → VADER compound scores
+                   ├── 5. Topic modelling      → BERTopic clusters
+                   └── 6. Temporal analysis    → Trends, peaks, COVID period comparisons
+```
+
+---
+
+## Key Findings
+
+### Corpus Scale
+| Metric | Value |
+|---|---|
+| Articles scraped | **12,496** |
+| Classified as PROTEST | **3,046** (24.4%) |
+| Outlets analysed | **3** |
+| Time span | **5 years** (2020–2024) |
+
+### Coverage Peaks
+
+Protest coverage is not spread evenly — a small number of high-attention events drive most of the volume:
+
+- **Black Lives Matter (May–Jun 2020):** 225 articles in 3 weeks, triggered by the killing of George Floyd
+- **US Capitol riot (Jan 2021):** 275 articles in 4 weeks, the single largest spike in the dataset
+- **UK anti-immigration unrest (Jul–Aug 2024):** 102 articles in 2 weeks, following the Southport stabbings
+
+### Sentiment
+
+Protest reporting is overwhelmingly negative across all outlets (median VADER compound near -1.0). However, this reflects the language of conflict and disruption in news writing — not necessarily hostility toward protesters.
+
+![Sentiment distribution by COVID period](7.2figures/sentiment_density_by_period.png)
+
+### Topic Evolution
+
+BERTopic identified 11–13 recurring themes. The dominant topics align with the coverage peaks above (BLM, Capitol, anti-immigration), while smaller clusters capture COVID restriction protests, Gaza/Ukraine-related mobilisation, and climate activism.
+
+![Topic evolution over time](7.2figures/topic_by_time.png)
+
+### Classifier Performance
+
+The zero-shot model (facebook/bart-large-mnli) at threshold τ=0.65 achieves **52% precision and 48% recall** on a manually labelled sample (N=85). This is sufficient as a scalable filter for corpus construction, but not a replacement for human validation — consistent with current NLP literature on automated PEA.
+
+---
+
+## Tech Stack
+
+| Component | Tools |
+|---|---|
+| Data collection | MediaCloud API, newspaper3k, requests |
+| Storage | MongoDB, pymongo |
+| Classification | Hugging Face Transformers (BART zero-shot) |
+| Sentiment | VADER (nltk) |
+| Topic modelling | BERTopic, sentence-transformers, scikit-learn |
+| Analysis & plotting | pandas, numpy, matplotlib |
+
+---
+
+## Repository Structure
+
+```
+├── 1.MediaCloud/          # Raw MediaCloud CSV exports
+├── 2.Data_cleaning/       # URL filtering and cleaning
+├── 3.web_scrapping/       # Article scraping → MongoDB
+├── 4.class_hf/            # Zero-shot protest classifier + threshold tuning
+├── 5.sentiment/           # VADER sentiment analysis
+├── 6.Topic_analysis/      # BERTopic modelling + outputs (CSV/HTML)
+├── 7.1.plots/             # Analysis and plotting scripts
+├── 7.2figures/            # Output figures
+├── 7.3outputs/            # Output tables (CSV)
+├── 8.MongoDB/             # Database export (.jsonl.gz)
+├── TFM_final.pdf          # Full MSc dissertation
+├── requirements.txt       # Python dependencies
+└── README.md
+```
+
+<details>
+<summary><b>Detailed file listing</b></summary>
+
+### 1.MediaCloud
+- `URLS.csv` — Raw CSV export from MediaCloud
 
 ### 2.Data_cleaning
-    * FirstQuery.py: Filters the MediaCloud export to keep only the target outlets and date range, and performs basic URL cleaning. Output: URLs_clean.csv (used as input for scraping).
+- `FirstQuery.py` — Filters export to target outlets and date range → produces `URLs_clean.csv`
 
 ### 3.web_scrapping
-    * fun_scrap3.py: Scraping helper functions.
-    * scrape_to_mongo.py: Reads URLs from URLs_clean.csv, scrapes article text using fun_scrap3.py, and uploads results to MongoDB.
-    * URLs_clean.csv: Output of FirstQuery.py.
+- `fun_scrap3.py` — Scraping helper functions (newspaper3k)
+- `scrape_to_mongo.py` — Reads cleaned URLs, scrapes text, upserts into MongoDB
+- `URLs_clean.csv` — Filtered URL list
 
 ### 4.class_hf
-    * human_sample.csv: Csv file manually labeled, then uploaded to MongoDB to use threshold.py.
-    * threshold.py: Finds/validates the classification threshold (used to convert model confidence into PROTEST / NOT_PROTEST).
-    * hf_class.py: Classification functions (Hugging Face zero-shot classification).
-    * run_hf.py: Runs the classifier over the MongoDB collection and writes labels scores back to MongoDB.
-    * hf_results.py: Analyses classifier outputs (counts, distributions, performance summaries, etc.).
-    
+- `hf_class.py` — Zero-shot classification functions
+- `run_hf.py` — Runs classifier over MongoDB collection
+- `threshold.py` — Threshold sweep and optimisation (maximises F0.5)
+- `hf_results.py` — Classification output analysis
+- `human_sample.csv` — Manually labelled evaluation sample (N=85)
+
 ### 5.sentiment
-    * sent_analysis.py: Runs sentiment analysis (VADER) and uploads sentiment fields back to MongoDB.
+- `sent_analysis.py` — VADER sentiment scoring, writes results back to MongoDB
 
 ### 6.Topic_analysis
-    * topic_modeling.py: Runs topic modelling and produces CSV/HTML outputs to inspect topics and trends.
-    *topic_modeling/
-        artices_with_topics.csv: Articles with assigned topic IDs.
-        representative_docs.csv: The 3 most representative documents per topic.
-        topic_info.csv: Topic metadata (topic ID, top words, sizes, etc.).
-        topic_share_by_paper_time.csv: Topic shares by outlet and quarter.
-        topic_share_by_paper.csv: Topic shares by outlet.
-        topic_share_by_time.csv: Topic shares over time  in 3-month bins.
-        topics_barchart.html: Top words per topic.
-        topic_map.html: Topic map visualisation.
+- `topic_modeling.py` — BERTopic modelling
+- `topic_modeling/` — Output CSVs and interactive HTML visualisations
 
-### 7.1plots
-    * check_sent_newspapers.py: Checks sentiment distributions across newspapers.
-    * plot_sentiment_density_by_period.py: Sentiment density curves by COVID period (pre/during/post) using VADER compound.
-    * plot_topic_by_time.py: Plots topic prevalence over time.
-    * protest_by_year.py: Counts PROTEST-labelled articles by year and outlet.
-    * protest_covid_period.py: Counts PROTEST articles by COVID period overall and by outlet.
-    * vader_covid.py: Summarises VADER compound scores by COVID period.
-    * weekly_protest_peaks.py: Computes weekly PROTEST article counts and reports peak weeks.
+### 7.1.plots
+- Scripts for sentiment density, topic trends, protest counts by year/period, and weekly peak detection
 
 ### 7.2figures
-    * sentiment_density_by_period.png: Output figure from plot_sentiment_density_by_period.py.
-    * topic_by_time.png: Output figure from plot_topic_by_time.py.
+- `sentiment_density_by_period.png` — Sentiment distribution by COVID period
+- `topic_by_time.png` — Topic group evolution over time
 
 ### 7.3outputs
-    * weekly_protest_counts_by_paper.csv: Output from weekly_protest_peaks.py.
-    * weekly_protest_counts.csv: Output from weekly_protest_peaks.py.
-    * protest_counts_by_covid_period_and_outlet.csv: Output from protest_by_year.py.
-    * protest_counts_long.csv: Output from protest_by_year.py.
-    * protest_counts_by_year_outlet.csv: Output from protest_by_year.py.
-    * sentiment_mean_pivot_outlet_x_covid_period.csv: Output from vader_covid.py.
-    * sentiment_mean_by_outlet_and_covid_period.csv: Output from vader_covid.py.
-    * sentiment_mean_overall_by_covid_period.csv: Output from vader_covid.py.
+- CSV tables: protest counts, sentiment means, weekly counts — all by outlet and COVID period
 
+### 8.MongoDB
+- `Texts.jsonl.gz` / `sample_texts.jsonl.gz` — Compressed database exports
 
-# How to run the code
+</details>
 
-##  MongoDB access
-In order to check the data set, there is a copy of the two data bases in 8.MongoDB, with a code that downloads the data directly from MongoDB into two .jsonl files. 
+---
 
-## Order of the code:
-1. Filer MediaCloud URLs: python 2.Data_cleaning/FirstQuery.py
-2. Scrape articles and upload to MongoDB: python 3.web_scrapping/scrape_to_mongo.py
-3. Run protest / not-protest classificatio: python 4.class_hf/run_hf.py
-4. Run sentiment analysis: python 5.sentiment/sent_analysis.py
-5. Run topic modelling: python 6.Topic_analysis/topic_modeling.py
-6. Generate figures and tables
-    python 7.1plots/plot_sentiment_density_by_period.py
-    python 7.1plots/plot_topic_by_time.py
-    python 7.1plots/weekly_protest_peaks.py
-    python 7.1plots/protest_by_year.py
-    python 7.1plots/protest_covid_period.py
-    python 7.1plots/vader_covid.py
-    
-    
-    
+## How to Run
 
-        
+```bash
+# 1. Clone the repo
+git clone https://github.com/eledelaf/Project-Master-Final-.git
+cd Project-Master-Final-
+
+# 2. Set up environment
+python -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+
+# 3. Configure MongoDB access
+#    Create a .env file with your MongoDB URI:
+#    MONGO_URI=mongodb+srv://...
+
+# 4. Run the pipeline in order
+python 2.Data_cleaning/FirstQuery.py
+python 3.web_scrapping/scrape_to_mongo.py
+python 4.class_hf/run_hf.py
+python 5.sentiment/sent_analysis.py
+python 6.Topic_analysis/topic_modeling.py
+
+# 5. Generate figures and analysis tables
+python 7.1.plots/plot_sentiment_density_by_period.py
+python 7.1.plots/plot_topic_by_time.py
+python 7.1.plots/weekly_protest_peaks.py
+python 7.1.plots/protest_by_year.py
+python 7.1.plots/protest_covid_period.py
+python 7.1.plots/vader_covid.py
+```
+
+> **Note:** The full pipeline requires MongoDB access and API keys. Pre-computed outputs (figures, CSV tables, and database exports) are included in the repo for review without running the code.
